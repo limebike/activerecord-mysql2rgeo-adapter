@@ -132,7 +132,6 @@ module ActiveRecord
 
           SpatialColumn.new(
             field_name,
-            lookup_cast_type(type_metadata.sql_type),
             default,
             type_metadata,
             field_value(field, "Null") == "YES",
