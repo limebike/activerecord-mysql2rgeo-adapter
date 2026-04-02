@@ -6,6 +6,12 @@ module ActiveRecord # :nodoc:
       class SpatialColumn < ConnectionAdapters::MySQL::Column # :nodoc:
         def initialize(name, default, sql_type_metadata = nil, null = true, default_function = nil, collation: nil, comment: nil,
 spatial: nil, array: false, **)
+          if default.respond_to?(:sql_type) && (sql_type_metadata.nil? || sql_type_metadata == true || sql_type_metadata == false)
+            null = sql_type_metadata unless sql_type_metadata.nil?
+            sql_type_metadata = default
+            default = cast_type
+            # cast_type = nil
+          end
           @sql_type_metadata = sql_type_metadata
           @array = array
           @geographic = !!(sql_type_metadata&.sql_type =~ /geography\(/i)
