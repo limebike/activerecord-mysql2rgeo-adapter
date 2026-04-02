@@ -102,7 +102,8 @@ module ActiveRecord
 
       class << self
         def native_database_types
-          super.merge(
+          # Rails 8.0: NATIVE_DATABASE_TYPES is a constant, not a superclass method
+          AbstractMysqlAdapter::NATIVE_DATABASE_TYPES.merge(
             geography: { name: "geometry" },
             geometry: { name: "geometry" },
             geometrycollection: { name: "geometrycollection" },
