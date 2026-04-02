@@ -3,66 +3,6 @@
 module ActiveRecord # :nodoc:
   module ConnectionAdapters # :nodoc:
     module Mysql2Rgeo # :nodoc:
-      class TableDefinition < MySQL::TableDefinition # :nodoc:
-        include ColumnMethods
-
-        # super: https://github.com/rails/rails/blob/master/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb
-        def new_column_definition(name, type, **options)
-          spatial_type = type.to_sym == :virtual ? options[:type]&.to_sym : type.to_sym
-
-          if spatial_type && (info = Mysql2RgeoAdapter.spatial_column_options(spatial_type))
-            if (limit = options.delete(:limit)) && limit.is_a?(::Hash)
-              options.merge!(limit)
-            end
-
-            geo_type = if type.to_sym == :virtual
-                         "GEOMETRY"
-                       else
-                         ColumnDefinitionUtils.geo_type(options[:type] || spatial_type || info[:type])
-                       end
-
-            if type.to_sym == :virtual
-              options.delete(:srid)
-            else
-              options[:srid] ||= ColumnDefinitionUtils.default_srid(options)
-              options[:comment] = ColumnDefinitionUtils.add_metadata_comment(
-                options[:comment],
-                geographic: options[:geographic],
-                has_m: options[:has_m],
-                has_z: options[:has_z],
-                array: options[:array],
-                default: options[:default],
-                srid: options[:srid],
-                geo_type: geo_type
-              )
-            end
-
-            options[:spatial_type] = geo_type
-            column = if type.to_sym == :virtual
-                       super(name, type, **options.merge(type: geo_type.downcase.to_sym))
-                     else
-                       super(name, geo_type.downcase.to_sym, **options)
-                     end
-          else
-            if options[:array]
-              options[:comment] =
-                ColumnDefinitionUtils.add_metadata_comment(options[:comment], array: options[:array])
-            end
-            column = super
-          end
-
-          column
-        end
-
-        def valid_column_definition_options
-          super + %i[array geographic has_m has_z spatial_type srid]
-        end
-      end
-
-      class Table < MySQL::Table # :nodoc:
-        include ColumnMethods
-      end
-
       module ColumnDefinitionUtils
         METADATA_TOKENS = {
           geographic: "mysql2rgeo:geographic",
@@ -146,6 +86,66 @@ geo_type: nil)
             "#{endian}#{[type].pack('V').unpack1('H*').upcase}#{srid_hex}#{body}"
           end
         end
+      end
+
+      class TableDefinition < MySQL::TableDefinition # :nodoc:
+        include ColumnMethods
+
+        # super: https://github.com/rails/rails/blob/master/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb
+        def new_column_definition(name, type, **options)
+          spatial_type = type.to_sym == :virtual ? options[:type]&.to_sym : type.to_sym
+
+          if spatial_type && (info = Mysql2RgeoAdapter.spatial_column_options(spatial_type))
+            if (limit = options.delete(:limit)) && limit.is_a?(::Hash)
+              options.merge!(limit)
+            end
+
+            geo_type = if type.to_sym == :virtual
+                         "GEOMETRY"
+                       else
+                         ColumnDefinitionUtils.geo_type(options[:type] || spatial_type || info[:type])
+                       end
+
+            if type.to_sym == :virtual
+              options.delete(:srid)
+            else
+              options[:srid] ||= ColumnDefinitionUtils.default_srid(options)
+              options[:comment] = ColumnDefinitionUtils.add_metadata_comment(
+                options[:comment],
+                geographic: options[:geographic],
+                has_m: options[:has_m],
+                has_z: options[:has_z],
+                array: options[:array],
+                default: options[:default],
+                srid: options[:srid],
+                geo_type: geo_type
+              )
+            end
+
+            options[:spatial_type] = geo_type
+            column = if type.to_sym == :virtual
+                       super(name, type, **options.merge(type: geo_type.downcase.to_sym))
+                     else
+                       super(name, geo_type.downcase.to_sym, **options)
+                     end
+          else
+            if options[:array]
+              options[:comment] =
+                ColumnDefinitionUtils.add_metadata_comment(options[:comment], array: options[:array])
+            end
+            column = super
+          end
+
+          column
+        end
+
+        def valid_column_definition_options
+          super + %i[array geographic has_m has_z spatial_type srid]
+        end
+      end
+
+      class Table < MySQL::Table # :nodoc:
+        include ColumnMethods
       end
     end
   end
